@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.canvas.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.image.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane id="AnchorPane" fx:id="panePrincipal" prefHeight="514.0" prefWidth="1161.0" style="-fx-background-color: #dee0e2;" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="alocacaoprocessos.FXMLDocumentController">
+   <children>
+      <Pane id="paneMemoria" fx:id="paneMemoria" prefHeight="317.0" prefWidth="631.0" style="-fx-background-color: white;">
+         <children>
+            <ImageView fx:id="imgMemoria" fitHeight="317.0" fitWidth="631.0" layoutY="-1.0" pickOnBounds="true">
+               <image>
+                  <Image url="@../imagens/ram.png" />
+               </image>
+               <effect>
+                  <ColorAdjust brightness="0.49" contrast="0.74" saturation="0.09" />
+               </effect>
+            </ImageView>
+            <Label fx:id="lblTempo" layoutX="14.0" layoutY="14.0" text="Instante:">
+               <font>
+                  <Font size="25.0" />
+               </font>
+            </Label>
+            <Label fx:id="txtTempo" layoutX="148.0" layoutY="14.0" text="0">
+               <font>
+                  <Font size="25.0" />
+               </font>
+            </Label>
+            <Label fx:id="txtCPU" layoutX="519.0" layoutY="14.0" text="0">
+               <font>
+                  <Font size="25.0" />
+               </font>
+            </Label>
+            <Label fx:id="lblCPU" layoutX="435.0" layoutY="14.0" text="CPU:">
+               <font>
+                  <Font size="25.0" />
+               </font>
+            </Label>
+         </children></Pane>
+      <RadioButton fx:id="radioFirst" layoutX="20.0" layoutY="330.0" mnemonicParsing="false" selected="true" text="First Fit" />
+      <RadioButton fx:id="radioWorst" layoutX="20.0" layoutY="354.0" mnemonicParsing="false" text="Worst Fit" />
+      <RadioButton fx:id="radioBest" layoutX="20.0" layoutY="377.0" mnemonicParsing="false" text="Best Fit" />
+      <TextField fx:id="txtMemoria" layoutX="197.0" layoutY="327.0" prefHeight="25.0" prefWidth="60.0" text="900" />
+      <Label fx:id="lblMemoria" layoutX="139.0" layoutY="331.0" text="Memória:" />
+      <Label fx:id="lblSO" layoutX="171.0" layoutY="360.0" text="SO:" />
+      <TextField fx:id="txtSO" layoutX="197.0" layoutY="357.0" prefHeight="25.0" prefWidth="60.0" text="200" />
+      <TextField fx:id="txtM2" layoutX="295.0" layoutY="355.0" prefHeight="25.0" prefWidth="60.0" text="100" />
+      <Label fx:id="lblM2" layoutX="269.0" layoutY="362.0" text="M2:" />
+      <Label fx:id="lblM1" layoutX="269.0" layoutY="332.0" text="M1:" />
+      <TextField fx:id="txtM1" layoutX="295.0" layoutY="325.0" prefHeight="25.0" prefWidth="60.0" text="50" />
+      <TextField fx:id="txtTC1" layoutX="197.0" layoutY="394.0" prefHeight="25.0" prefWidth="60.0" text="2" />
+      <Label fx:id="lblTC1" layoutX="171.0" layoutY="401.0" text="Tc1:" />
+      <Label fx:id="lblTC2" layoutX="171.0" layoutY="431.0" text="Tc2:" />
+      <TextField fx:id="txtTc2" layoutX="197.0" layoutY="424.0" prefHeight="25.0" prefWidth="60.0" text="5" />
+      <TextField fx:id="txtTD1" layoutX="295.0" layoutY="392.0" prefHeight="25.0" prefWidth="60.0" text="2" />
+      <Label fx:id="lblTD1" layoutX="269.0" layoutY="399.0" text="Td1:" />
+      <Label fx:id="lblTD2" layoutX="269.0" layoutY="429.0" text="Td2:" />
+      <TextField fx:id="txtTD2" layoutX="295.0" layoutY="422.0" prefHeight="25.0" prefWidth="60.0" text="8" />
+      <Button fx:id="btPlay" layoutX="110.0" layoutY="460.0" mnemonicParsing="false" onAction="#iniciar" prefHeight="40.0" prefWidth="123.0" style="-fx-background-color: #00ff00; -fx-border-color: black;" text="Simular" />
+      <TextField fx:id="txtQtd" layoutX="86.0" layoutY="407.0" prefHeight="25.0" prefWidth="60.0" text="9" />
+      <Label fx:id="lblQtd" layoutX="14.0" layoutY="411.0" text="Quantidade:" />
+      <TextArea fx:id="txtLog" editable="false" layoutX="361.0" layoutY="316.0" prefHeight="198.0" prefWidth="270.0" wrapText="true" />
+      <TableView fx:id="tabProcessos" layoutX="633.0" prefHeight="514.0" prefWidth="563.0">
+        <columns>
+            
+            <TableColumn fx:id="colId" text="ID" />
+            <TableColumn fx:id="colTam" text="Tamanho" />
+            <TableColumn fx:id="colPorc" text="Porc(%)" />
+            <TableColumn fx:id="colCria" text="Criado" />
+            <TableColumn fx:id="colAloc" text="Alocado" />
+            <TableColumn fx:id="colConc" text="Concluido" />
+            <TableColumn fx:id="colStat" text="Status" />
+        </columns>
+      </TableView>
+   </children>
+</AnchorPane>
