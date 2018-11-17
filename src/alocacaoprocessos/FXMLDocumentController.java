@@ -2,8 +2,6 @@ package alocacaoprocessos;
 
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Timer;
@@ -129,6 +127,8 @@ public class FXMLDocumentController implements Initializable{
     private TableColumn<Processo,Integer> colAloc;
     @FXML
     private TableColumn<Processo,Integer> colConc;
+    @FXML
+    private TableColumn<Processo,Integer> colDur;
     
     @FXML
     private Label txtTempo;
@@ -138,9 +138,20 @@ public class FXMLDocumentController implements Initializable{
     private Label txtCPU;
     @FXML
     private Label lblCPU;
+    @FXML
+    private Label txtMedia;
+    @FXML
+    private Label lblMedia;
+    
     
     ObservableList<Processo> processos = FXCollections.observableArrayList();
     ObservableList<Processo> processosCriados = FXCollections.observableArrayList();
+    ObservableList<Processo> processosAlocados = FXCollections.observableArrayList();
+    ObservableList<Processo> processosFinalizados = FXCollections.observableArrayList();
+    
+    ObservableList<Frame> framesLivres = FXCollections.observableArrayList();
+    ObservableList<Frame> framesOcupados = FXCollections.observableArrayList();
+    
     ToggleGroup grupoMetodos = new ToggleGroup();
     int memoria, tamSO, m1, m2, tc1, tc2, td1, td2, qtd;
     float cpu=0;
@@ -148,47 +159,12 @@ public class FXMLDocumentController implements Initializable{
     String metodo;
     int ultimo;
     Timer tempo = new Timer();
-    ObservableList<Frame> mapa = FXCollections.observableArrayList();
     
     
     TimerTask tick = new TimerTask(){
         @Override
         public void run(){
-            Platform.runLater(()->{
-                int tempoAtual = Integer.parseInt(txtTempo.getText())+1;
-                txtTempo.setText(Integer.toString(tempoAtual));
-                processos.forEach(proc -> {
-                    if(processosCriados.isEmpty() && proc.tempoCriacao == tempoAtual){
-                        processosCriados.add(proc);
-                        ultimo = proc.tempoCriacao;
-                        Platform.runLater(()->{
-                            processos.remove(proc);
-                            alocaProcesso(proc, tempoAtual);
-                        });
-                    }
-                    else if( (proc.tempoCriacao + ultimo)==tempoAtual ){
-                        proc.tempoCriacao = tempoAtual;
-                        ultimo = proc.tempoCriacao;
-                        Platform.runLater(()->{
-                            processosCriados.add(proc);
-                            processos.remove(proc);
-                            alocaProcesso(proc, tempoAtual);
-                        });
-                    }
-                });
-                processosCriados.forEach(proc -> {
-                    if( proc.tempoDuracao+proc.tempoAloc <= tempoAtual && proc.status=="Alocado"){
-                        logMsg(proc.id+" Desalocado!");
-                        proc.status="Finalizado";
-                        Platform.runLater(()->{
-                            desalocaProcesso(proc, tempoAtual);
-                        });
-                    }
-                    else if( proc.tempoAloc==tempoAtual && proc.status=="Fila"){
-                        alocaProcesso(proc, tempoAtual);
-                    }
-                });
-            });
+            rotina();
         }
     };
     
@@ -214,11 +190,64 @@ public class FXMLDocumentController implements Initializable{
             new PropertyValueFactory<>("tempoAloc"));
         colConc.setCellValueFactory(
             new PropertyValueFactory<>("tempoConc"));
+        colDur.setCellValueFactory(
+            new PropertyValueFactory<>("tempoDuracao"));
         
         tabProcessos.setItems(processosCriados);
         
         //Criando mapa de memória com o tamFisico da imagem do pente
-        mapa.add(new Frame(0,631, false, memoria));
+        framesLivres.add(new Frame(0,631, false, memoria));
+    }
+    
+    public void rotina() {
+        Platform.runLater(() -> {
+            int tempoAtual = Integer.parseInt(txtTempo.getText()) + 1;
+            txtTempo.setText(Integer.toString(tempoAtual));
+            processos.forEach(proc -> {
+                if (processosCriados.isEmpty() && proc.tempoCriacao == tempoAtual) {
+                    processosCriados.add(proc);
+                    ultimo = proc.tempoCriacao;
+                    Platform.runLater(() -> {
+                        processos.remove(proc);
+                    });
+                } else if ((proc.tempoCriacao + ultimo) == tempoAtual) {
+                    proc.tempoCriacao = tempoAtual;
+                    ultimo = proc.tempoCriacao;
+                    Platform.runLater(() -> {
+                        processosCriados.add(proc);
+                        processos.remove(proc);
+                    });
+                }
+            });
+            processosCriados.forEach(proc -> {
+                if (proc.tempoAloc <= tempoAtual && proc.status == "Fila") {
+                    alocaProcesso(proc, tempoAtual);
+                }
+            });
+            processosAlocados.forEach(proc -> {
+                if (proc.tempoDuracao + proc.tempoAloc <= tempoAtual && proc.status == "Executando") {
+                    Platform.runLater(() -> {
+                        desalocaProcesso(proc, tempoAtual);
+                        processosFinalizados.add(proc);
+                        processosAlocados.remove(proc);
+                    });
+                }
+            });
+            if(processosAlocados.isEmpty()){
+                tempo.cancel();
+                calculaMedia();
+            }
+        });
+    }
+    
+    public void calculaMedia(){
+        int somatorio=0;
+        for(Processo proc: processosFinalizados){
+            somatorio += (proc.tempoAloc - proc.tempoCriacao);
+        }
+        float media = somatorio/qtd;
+        txtMedia.setText( Float.toString(media) );
+        //btPlay.setDisable(false);
     }
     
     public void desenhaSO(){
@@ -234,11 +263,11 @@ public class FXMLDocumentController implements Initializable{
         id.setFill(Color.WHITE);
         paneSO.getChildren().add(id);
         
-        Frame root = mapa.get(0);
+        Frame root = framesLivres.get(0);
         Frame frameSo = new Frame(0, sistOp.posFim, true, tamSO);
         Frame resto = new Frame(sistOp.posFim, root.posFim, false, memoria-tamSO);
-        mapa.set(0,frameSo);
-        mapa.add(resto);
+        framesOcupados.add(frameSo);
+        framesLivres.set(0,resto);
         
         Platform.runLater(()->{
             paneMemoria.getChildren().add(paneSO);
@@ -252,6 +281,17 @@ public class FXMLDocumentController implements Initializable{
             txtLog.appendText("\n["+LocalDateTime.now().getHour()+":" + LocalDateTime.now().getMinute()+":"
             + LocalDateTime.now().getSecond()+"] - " + msg);
         });
+    }
+    
+    public Frame getMaisPerto(List<Frame> lista){
+        Frame menor = lista.get(0);
+        for(int i=0; i<framesLivres.size();i++){
+            Frame frame = framesLivres.get(i);
+            if(frame.posInicio<=menor.posInicio){
+                menor = frame;
+            }
+        }
+        return menor;
     }
     
     //Função que gera processos aleatórios
@@ -268,67 +308,208 @@ public class FXMLDocumentController implements Initializable{
         }
     }
     
-    public void juntaRestos(){
-        for (int i = 2; i < mapa.size(); i++) {
-            Frame atual = mapa.get(i);
-            Frame anterior = mapa.get(i-1);
-            if (!anterior.ocupado && !atual.ocupado) {
-                Frame novo = new Frame(anterior.posInicio, atual.posFim, false, anterior.tamanho + atual.tamanho);
-                mapa.set(mapa.indexOf(anterior), novo);
-                mapa.remove(atual);
-                anterior = novo;
-                logMsg("Juntei restos");
-            }
+    
+    public void ordenaFrames(){
+        ObservableList<Frame> result = FXCollections.observableArrayList();
+        while( !framesLivres.isEmpty() ){
+            Frame menor = getMaisPerto(framesLivres);
+            framesLivres.remove(menor);
+            result.add(menor);
         }
-        logMsg("Frames: " + mapa.size());
+        framesLivres = result;
     }
     
-    public void desalocaProcesso(Processo p, int tempo){
+    public void juntaRestos(){
+        for(int i=1; i<framesLivres.size(); i++){
+            Frame anterior = framesLivres.get(i-1);
+            Frame atual = framesLivres.get(i);
+            if(anterior.posFim==atual.posInicio){
+                Frame novo = new Frame(anterior.posInicio, atual.posFim, false, anterior.tamanho+atual.tamanho);
+                framesLivres.remove(atual);
+                framesLivres.set(framesLivres.indexOf(anterior), novo);
+                i--;
+            }
+        }
+    }
+    
+    public void desalocaProcesso(Processo p, int t){
+        tempo.cancel();
         Platform.runLater(()->{
             try{
-                p.status="Desalocado";
+                p.status="Finalizado";
                 p.desenho.setVisible(false);
                 paneMemoria.getChildren().remove(p.desenho);
                 p.desenho = null;
-                p.tempoConc=tempo;
-                p.frame.ocupado = false;
+                p.tempoConc=t;
+                tabProcessos.refresh();
             }
-            catch(Exception e){}
+            catch(Exception e){
+                desalocaProcesso(p, t);
+            }
         });
+        framesOcupados.remove(p.frame);
+        framesLivres.add(p.frame);
+        ordenaFrames();
+        juntaRestos();
         cpu-=p.porc;
         atualizaCPU();
-        juntaRestos();
+        tempo=new Timer();
+        tempo.scheduleAtFixedRate( new TimerTask(){
+            @Override
+            public void run(){
+                rotina();
+            }
+        },1000, 1000);
+    }
+    
+    public void worstFit(Processo p, int tempo){
+        Frame maior = null;
+        boolean igual = false;
+        int i=0;
+        for( i=0 ; i<framesLivres.size(); i++){
+            Frame f = framesLivres.get(i);
+            if(f.tamanho>=p.tamanho){
+                maior = f;
+                break;
+            }
+        }
+        if(maior!=null){
+            for(i=0; i<framesLivres.size(); i++){
+                Frame f = framesLivres.get(i);
+                p.tamFisico = (f.tamFisico*p.tamanho)/f.tamanho;
+                if(f.tamFisico>maior.tamFisico && f.tamFisico>p.tamFisico){
+                    maior = f;
+                }
+                else if(f.tamFisico>=maior.tamFisico && f.tamFisico==p.tamFisico){
+                    maior = f;
+                    igual = true;
+                    break;
+                }
+            }
+            if(!igual){
+                int indice = framesLivres.indexOf(maior);
+                Frame aloc = new Frame(maior.posInicio, maior.posInicio+p.tamFisico, true, p.tamanho);
+                Frame resto = new Frame(aloc.posFim, maior.posFim, false, maior.tamanho-p.tamanho);
+                p.frame = aloc;
+                framesOcupados.add(aloc);
+                framesLivres.set(indice, resto);
+                
+                p.posInicio = aloc.posInicio;
+                p.posFim = aloc.posFim;
+                p.tempoAloc = tempo;
+                p.status="Executando";
+                tabProcessos.refresh();
+                processosAlocados.add(p);
+                
+                desenhaProcesso(p);
+                cpu+=p.porc;
+                atualizaCPU();
+            }
+            else{
+                framesOcupados.add(maior);
+                framesLivres.remove(maior);
+                p.posInicio = maior.posInicio;
+                p.posFim = maior.posFim;
+                p.tempoAloc = tempo;
+                p.status="Alocado";
+                tabProcessos.refresh();
+                
+                desenhaProcesso(p);
+                cpu+=p.porc;
+                atualizaCPU();
+            }
+        }   
+    }
+    
+    public Frame getMenorTam(Frame f, Processo p){
+        Frame menor = f;
+        for (Frame frame : framesLivres) {
+            if(frame.tamFisico<menor.tamFisico && frame.tamFisico>=p.tamFisico){
+                menor = frame;
+            }
+        }
+        return menor;
+    }
+
+    
+    public void bestFit(Processo p, int t){
+        Frame best;
+        for (Frame frame : framesLivres) {
+            if (frame.tamFisico >= p.tamFisico) {
+                best = frame;
+                best = getMenorTam(best, p);
+                if (best.tamanho > p.tamanho) {
+                    p.tamFisico = (best.tamFisico * p.tamanho) / best.tamanho;
+                    int indice = framesLivres.indexOf(best);
+                    Frame aloc = new Frame(best.posInicio, best.posInicio + p.tamFisico, true, p.tamanho);
+                    Frame resto = new Frame(aloc.posFim, best.posFim, false, best.tamanho - p.tamanho);
+                    p.frame = aloc;
+                    framesOcupados.add(aloc);
+                    framesLivres.set(indice, resto);
+
+                    p.posInicio = aloc.posInicio;
+                    p.posFim = aloc.posFim;
+                    p.tempoAloc = t;
+                    p.status = "Executando";
+                    tabProcessos.refresh();
+                    processosAlocados.add(p);
+
+                    desenhaProcesso(p);
+                    cpu += p.porc;
+                    atualizaCPU();
+                    break;
+                } else if (best.tamanho == p.tamanho) {
+                    framesOcupados.add(best);
+                    framesLivres.remove(best);
+                    p.posInicio = best.posInicio;
+                    p.posFim = best.posFim;
+                    p.tempoAloc = t;
+                    p.status = "Alocado";
+                    tabProcessos.refresh();
+
+                    desenhaProcesso(p);
+                    cpu += p.porc;
+                    atualizaCPU();
+                    break;
+                }
+                break;
+            }
+        }
+        
     }
     
     public void firstFit(Processo p, int tempo){
-        for(int i=0; i<mapa.size(); i++){
-            Frame frame = mapa.get(i);
-            if(!(frame.ocupado) && frame.tamanho>p.tamanho){
+        for(int i=0; i<framesLivres.size(); i++){
+            Frame frame = framesLivres.get(i);
+            if(frame.tamanho>p.tamanho){
                 p.tamFisico = (frame.tamFisico*p.tamanho)/frame.tamanho;
-                int indice = mapa.indexOf(frame);
+                int indice = framesLivres.indexOf(frame);
                 Frame aloc = new Frame(frame.posInicio, frame.posInicio+p.tamFisico, true, p.tamanho);
-                Frame resto = new Frame(frame.posInicio+p.tamFisico, frame.posFim, false, frame.tamanho-p.tamanho);
+                Frame resto = new Frame(aloc.posFim, frame.posFim, false, frame.tamanho-p.tamanho);
                 p.frame = aloc;
-                mapa.set(indice, aloc);
-                mapa.add(indice+1, resto);
+                framesOcupados.add(aloc);
+                framesLivres.set(indice, resto);
                 
-                p.posInicio = frame.posInicio;
-                p.posFim = frame.posInicio+p.tamFisico;
+                p.posInicio = aloc.posInicio;
+                p.posFim = aloc.posFim;
                 p.tempoAloc = tempo;
-                p.status="Alocado";
+                p.status="Executando";
+                tabProcessos.refresh();
+                processosAlocados.add(p);
                 
                 desenhaProcesso(p);
                 cpu+=p.porc;
                 atualizaCPU();
                 break;
             }
-            else if(!(frame.ocupado) && frame.tamanho==p.tamanho){
-                int indice = mapa.indexOf(frame);
-                mapa.set(indice, new Frame(frame.posInicio, frame.posInicio+p.tamFisico, true, p.tamanho));
+            else if(frame.tamanho==p.tamanho){
+                framesOcupados.add(frame);
+                framesLivres.remove(frame);
                 p.posInicio = frame.posInicio;
                 p.posFim = frame.posFim;
                 p.tempoAloc = tempo;
                 p.status="Alocado";
+                tabProcessos.refresh();
                 
                 desenhaProcesso(p);
                 cpu+=p.porc;
@@ -356,13 +537,29 @@ public class FXMLDocumentController implements Initializable{
             paneMemoria.getChildren().add(paneProc);
             paneProc.relocate(p.posInicio, 101);
         });
+        logMsg("P: "+p.id+" Ini: "+p.posInicio+" Fim: "+p.posFim);
     }
     
-    public void alocaProcesso(Processo p, int tempo){
+    public void alocaProcesso(Processo p, int t){
+        tempo.cancel();
         switch(metodo){
             case "First Fit":
-                firstFit(p, tempo);
+                firstFit(p, t);
+                break;
+            case "Best Fit":
+                bestFit(p, t);
+                break;
+            case "Worst Fit":
+                worstFit(p, t);
+                break;
         }
+        tempo=new Timer();
+        tempo.scheduleAtFixedRate( new TimerTask(){
+            @Override
+            public void run(){
+                rotina();
+            }
+        },1000, 1000);
     }
     
     public void atualizaCPU(){
@@ -397,8 +594,8 @@ public class FXMLDocumentController implements Initializable{
             logMsg("M2 não pode ser maior que a memória");
             return -1;
         }
-        else if(qtd>15){
-            logMsg("Máximo de processos é 15");
+        else if(qtd>20){
+            logMsg("Máximo de processos é 20");
             return -1;
         }
         else{
