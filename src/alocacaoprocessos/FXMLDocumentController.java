@@ -153,20 +153,13 @@ public class FXMLDocumentController implements Initializable{
     ObservableList<Frame> framesOcupados = FXCollections.observableArrayList();
     
     ToggleGroup grupoMetodos = new ToggleGroup();
-    int memoria, tamSO, m1, m2, tc1, tc2, td1, td2, qtd;
+    int memoria, tamSO, m1, m2, tc1, tc2, td1, td2, qtd, ultimo;
     float cpu=0;
     Processo sistOp;
     String metodo;
-    int ultimo;
     Timer tempo = new Timer();
     
     
-    TimerTask tick = new TimerTask(){
-        @Override
-        public void run(){
-            rotina();
-        }
-    };
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -196,7 +189,6 @@ public class FXMLDocumentController implements Initializable{
         tabProcessos.setItems(processosCriados);
         
         //Criando mapa de memória com o tamFisico da imagem do pente
-        framesLivres.add(new Frame(0,631, false, memoria));
     }
     
     public void rotina() {
@@ -204,13 +196,13 @@ public class FXMLDocumentController implements Initializable{
             int tempoAtual = Integer.parseInt(txtTempo.getText()) + 1;
             txtTempo.setText(Integer.toString(tempoAtual));
             processos.forEach(proc -> {
-                if (processosCriados.isEmpty() && proc.tempoCriacao == tempoAtual) {
+                if (processosCriados.isEmpty() && proc.tempoCriacao <= tempoAtual) {
                     processosCriados.add(proc);
                     ultimo = proc.tempoCriacao;
                     Platform.runLater(() -> {
                         processos.remove(proc);
                     });
-                } else if ((proc.tempoCriacao + ultimo) == tempoAtual) {
+                } else if ((proc.tempoCriacao + ultimo) <= tempoAtual) {
                     proc.tempoCriacao = tempoAtual;
                     ultimo = proc.tempoCriacao;
                     Platform.runLater(() -> {
@@ -220,20 +212,18 @@ public class FXMLDocumentController implements Initializable{
                 }
             });
             processosCriados.forEach(proc -> {
-                if (proc.tempoAloc <= tempoAtual && proc.status == "Fila") {
+                if (proc.tempoAloc <= tempoAtual && proc.status.equals("Fila")) {
                     alocaProcesso(proc, tempoAtual);
                 }
             });
             processosAlocados.forEach(proc -> {
-                if (proc.tempoDuracao + proc.tempoAloc <= tempoAtual && proc.status == "Executando") {
-                    Platform.runLater(() -> {
+                if ( proc.status.equals("Executando") && (proc.tempoDuracao + proc.tempoAloc) <= tempoAtual) {
+                    Platform.runLater(()->{
                         desalocaProcesso(proc, tempoAtual);
-                        processosFinalizados.add(proc);
-                        processosAlocados.remove(proc);
                     });
                 }
             });
-            if(processosAlocados.isEmpty()){
+            if(processosAlocados.isEmpty() && processos.isEmpty()){
                 tempo.cancel();
                 calculaMedia();
             }
@@ -247,7 +237,8 @@ public class FXMLDocumentController implements Initializable{
         }
         float media = somatorio/qtd;
         txtMedia.setText( Float.toString(media) );
-        //btPlay.setDisable(false);
+        btPlay.setDisable(false);
+        
     }
     
     public void desenhaSO(){
@@ -268,7 +259,8 @@ public class FXMLDocumentController implements Initializable{
         Frame resto = new Frame(sistOp.posFim, root.posFim, false, memoria-tamSO);
         framesOcupados.add(frameSo);
         framesLivres.set(0,resto);
-        
+        sistOp.frame = frameSo;
+        sistOp.desenho = paneSO;
         Platform.runLater(()->{
             paneMemoria.getChildren().add(paneSO);
             paneSO.relocate(sistOp.posInicio, 101);
@@ -334,25 +326,26 @@ public class FXMLDocumentController implements Initializable{
     
     public void desalocaProcesso(Processo p, int t){
         tempo.cancel();
-        Platform.runLater(()->{
-            try{
-                p.status="Finalizado";
-                p.desenho.setVisible(false);
-                paneMemoria.getChildren().remove(p.desenho);
-                p.desenho = null;
-                p.tempoConc=t;
-                tabProcessos.refresh();
-            }
-            catch(Exception e){
-                desalocaProcesso(p, t);
-            }
-        });
-        framesOcupados.remove(p.frame);
-        framesLivres.add(p.frame);
-        ordenaFrames();
-        juntaRestos();
-        cpu-=p.porc;
-        atualizaCPU();
+        try{
+            p.status="Finalizado";
+            p.desenho.setVisible(false);
+            paneMemoria.getChildren().remove(p.desenho);
+            p.desenho = null;
+            p.tempoConc=t;
+            tabProcessos.refresh();
+            
+            processosFinalizados.add(p);
+            processosAlocados.remove(p);
+            framesOcupados.remove(p.frame);
+            framesLivres.add(p.frame);
+            ordenaFrames();
+            juntaRestos();
+            cpu-=p.porc;
+            atualizaCPU();
+        }
+        catch(Exception e){
+            desalocaProcesso(p, t);
+        }
         tempo=new Timer();
         tempo.scheduleAtFixedRate( new TimerTask(){
             @Override
@@ -368,7 +361,7 @@ public class FXMLDocumentController implements Initializable{
         int i=0;
         for( i=0 ; i<framesLivres.size(); i++){
             Frame f = framesLivres.get(i);
-            if(f.tamanho>=p.tamanho){
+            if(f.tamFisico>=p.tamFisico){
                 maior = f;
                 break;
             }
@@ -411,7 +404,7 @@ public class FXMLDocumentController implements Initializable{
                 p.posInicio = maior.posInicio;
                 p.posFim = maior.posFim;
                 p.tempoAloc = tempo;
-                p.status="Alocado";
+                p.status="Executando";
                 tabProcessos.refresh();
                 
                 desenhaProcesso(p);
@@ -464,7 +457,7 @@ public class FXMLDocumentController implements Initializable{
                     p.posInicio = best.posInicio;
                     p.posFim = best.posFim;
                     p.tempoAloc = t;
-                    p.status = "Alocado";
+                    p.status = "Executando";
                     tabProcessos.refresh();
 
                     desenhaProcesso(p);
@@ -508,7 +501,7 @@ public class FXMLDocumentController implements Initializable{
                 p.posInicio = frame.posInicio;
                 p.posFim = frame.posFim;
                 p.tempoAloc = tempo;
-                p.status="Alocado";
+                p.status="Executando";
                 tabProcessos.refresh();
                 
                 desenhaProcesso(p);
@@ -537,7 +530,7 @@ public class FXMLDocumentController implements Initializable{
             paneMemoria.getChildren().add(paneProc);
             paneProc.relocate(p.posInicio, 101);
         });
-        logMsg("P: "+p.id+" Ini: "+p.posInicio+" Fim: "+p.posFim);
+        logMsg("P: "+p.id+" Início: "+p.posInicio+" Fim: "+p.posFim);
     }
     
     public void alocaProcesso(Processo p, int t){
@@ -599,16 +592,39 @@ public class FXMLDocumentController implements Initializable{
             return -1;
         }
         else{
+            txtLog.clear();
+            txtMedia.setText("0");
+            cpu=0;
+            atualizaCPU();
+            ultimo = 0;
+            processos.clear();
+            processosCriados.clear();
+            processosAlocados.clear();
+            processosFinalizados.clear();
+            framesLivres.clear();
+            framesOcupados.clear();
+            framesLivres.add(new Frame(0,631, false, memoria));
             btPlay.setDisable(true);
             logMsg(metodo);
             int tamFisico = (631*tamSO)/memoria;
             float porc = ( (float)tamSO/(float)memoria) * 100;
+            if(sistOp!=null){
+                sistOp.desenho.setVisible(false);
+                paneMemoria.getChildren().remove(sistOp.desenho);
+            }
             sistOp = new Processo(99, tamSO, 0, 0, "infinito", porc, tamFisico);
             desenhaSO();
             cpu+=sistOp.porc;
             atualizaCPU();
             gerarProcessos();
-            tempo.scheduleAtFixedRate(tick, 1000, 1000);
+            txtTempo.setText(Integer.toString(0));
+            tempo = new Timer();
+            tempo.scheduleAtFixedRate( new TimerTask(){
+                @Override
+                public void run(){
+                    rotina();
+                }
+            },1000, 1000);
         }
         return 0;
     }
