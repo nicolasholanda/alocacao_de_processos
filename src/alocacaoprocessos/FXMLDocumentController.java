@@ -129,6 +129,8 @@ public class FXMLDocumentController implements Initializable{
     private TableColumn<Processo,Integer> colConc;
     @FXML
     private TableColumn<Processo,Integer> colDur;
+    @FXML
+    private TableColumn<Processo,Integer> colEsp;
     
     @FXML
     private Label txtTempo;
@@ -153,7 +155,7 @@ public class FXMLDocumentController implements Initializable{
     ObservableList<Frame> framesOcupados = FXCollections.observableArrayList();
     
     ToggleGroup grupoMetodos = new ToggleGroup();
-    int memoria, tamSO, m1, m2, tc1, tc2, td1, td2, qtd, ultimo;
+    int memoria, tamSO, m1, m2, tc1, tc2, td1, td2, qtd;
     float cpu=0;
     Processo sistOp;
     String metodo;
@@ -185,6 +187,8 @@ public class FXMLDocumentController implements Initializable{
             new PropertyValueFactory<>("tempoConc"));
         colDur.setCellValueFactory(
             new PropertyValueFactory<>("tempoDuracao"));
+        colEsp.setCellValueFactory(
+            new PropertyValueFactory<>("tempoEspera"));
         
         tabProcessos.setItems(processosCriados);
         
@@ -196,17 +200,9 @@ public class FXMLDocumentController implements Initializable{
             int tempoAtual = Integer.parseInt(txtTempo.getText()) + 1;
             txtTempo.setText(Integer.toString(tempoAtual));
             processos.forEach(proc -> {
-                if (processosCriados.isEmpty() && proc.tempoCriacao <= tempoAtual) {
+                if (proc.tempoCriacao <= tempoAtual) {
                     processosCriados.add(proc);
-                    ultimo = proc.tempoCriacao;
                     Platform.runLater(() -> {
-                        processos.remove(proc);
-                    });
-                } else if ((proc.tempoCriacao + ultimo) <= tempoAtual) {
-                    proc.tempoCriacao = tempoAtual;
-                    ultimo = proc.tempoCriacao;
-                    Platform.runLater(() -> {
-                        processosCriados.add(proc);
                         processos.remove(proc);
                     });
                 }
@@ -233,7 +229,7 @@ public class FXMLDocumentController implements Initializable{
     public void calculaMedia(){
         int somatorio=0;
         for(Processo proc: processosFinalizados){
-            somatorio += (proc.tempoAloc - proc.tempoCriacao);
+            somatorio += proc.tempoEspera;
         }
         float media = somatorio/qtd;
         txtMedia.setText( Float.toString(media) );
@@ -250,7 +246,7 @@ public class FXMLDocumentController implements Initializable{
         paneSO.setMinWidth(sistOp.posFim);
         paneSO.setOpacity(0.7);
         Text id = new Text("SO");
-        id.setFont(Font.font("Verdana", 20));
+        id.setFont(Font.font("Verdana", sistOp.tamFisico/2));
         id.setFill(Color.WHITE);
         paneSO.getChildren().add(id);
         
@@ -288,15 +284,18 @@ public class FXMLDocumentController implements Initializable{
     
     //Função que gera processos aleatórios
     public void gerarProcessos(){
+        int anterior = 0;
         for(int i=0; i<qtd; i++){
             String status = "Fila";
             int tamanho = (int) (Math.random() * (m2-m1) + m1);
-            int tc = (int) (Math.random() * (tc2-tc1)) + tc1;
+            int tc = (int) ( (Math.random() * (tc2-tc1)) + tc1 ) + anterior;
+            anterior = tc;
             int td = (int) (Math.random() * (td2-td1)) + td1;
             float porc = ( (float)tamanho/(float)memoria) * 100;
             int tamFisico = (631*tamanho)/memoria;
             Processo p = new Processo(i, tamanho, tc, td, status, porc, tamFisico);
             processos.add(p);
+            logMsg(" ID: "+p.id+"   Criação: "+p.tempoCriacao);
         }
     }
     
@@ -332,6 +331,7 @@ public class FXMLDocumentController implements Initializable{
             paneMemoria.getChildren().remove(p.desenho);
             p.desenho = null;
             p.tempoConc=t;
+            p.tempoEspera = p.tempoConc - p.tempoCriacao;
             tabProcessos.refresh();
             
             processosFinalizados.add(p);
@@ -406,6 +406,7 @@ public class FXMLDocumentController implements Initializable{
                 p.tempoAloc = tempo;
                 p.status="Executando";
                 tabProcessos.refresh();
+                processosAlocados.add(p);
                 
                 desenhaProcesso(p);
                 cpu+=p.porc;
@@ -459,6 +460,7 @@ public class FXMLDocumentController implements Initializable{
                     p.tempoAloc = t;
                     p.status = "Executando";
                     tabProcessos.refresh();
+                    processosAlocados.add(p);
 
                     desenhaProcesso(p);
                     cpu += p.porc;
@@ -503,6 +505,7 @@ public class FXMLDocumentController implements Initializable{
                 p.tempoAloc = tempo;
                 p.status="Executando";
                 tabProcessos.refresh();
+                processosAlocados.add(p);
                 
                 desenhaProcesso(p);
                 cpu+=p.porc;
@@ -521,7 +524,7 @@ public class FXMLDocumentController implements Initializable{
         paneProc.setOpacity(0.7);
         
         Text id = new Text( Integer.toString(p.id) );
-        id.setFont(Font.font("Verdana", 20));
+        id.setFont(Font.font("Verdana", p.tamFisico/2));
         id.setFill(Color.WHITE);
         paneProc.getChildren().add(id);
         
@@ -530,7 +533,6 @@ public class FXMLDocumentController implements Initializable{
             paneMemoria.getChildren().add(paneProc);
             paneProc.relocate(p.posInicio, 101);
         });
-        logMsg("P: "+p.id+" Início: "+p.posInicio+" Fim: "+p.posFim);
     }
     
     public void alocaProcesso(Processo p, int t){
@@ -596,7 +598,7 @@ public class FXMLDocumentController implements Initializable{
             txtMedia.setText("0");
             cpu=0;
             atualizaCPU();
-            ultimo = 0;
+            //ultimo = 0;
             processos.clear();
             processosCriados.clear();
             processosAlocados.clear();

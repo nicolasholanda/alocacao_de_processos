@@ -5,11 +5,20 @@ import javafx.scene.layout.StackPane;
 
 public class Processo {
     int id, tamanho, tempoCriacao, tempoAloc, tempoConc, tempoDuracao, posInicio=0, posFim=0, tamFisico;
+    int tempoEspera = (tempoConc - tempoCriacao);
     float porc=0;
     String status;
     Frame frame;
     StackPane desenho;
-
+    
+    public void setTempoEspera(int tempoEspera){
+        this.tempoEspera = tempoEspera;
+    }
+    
+    public int getTempoEspera(){
+        return tempoEspera;
+    }
+    
     public int getId() {
         return id;
     }

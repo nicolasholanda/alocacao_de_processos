@@ -11,7 +11,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane id="AnchorPane" fx:id="panePrincipal" prefHeight="514.0" prefWidth="1211.0" style="-fx-background-color: #dee0e2;" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="alocacaoprocessos.FXMLDocumentController">
+<AnchorPane id="AnchorPane" fx:id="panePrincipal" prefHeight="514.0" prefWidth="1310.0" style="-fx-background-color: #dee0e2;" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="alocacaoprocessos.FXMLDocumentController">
    <children>
       <Pane id="paneMemoria" fx:id="paneMemoria" prefHeight="317.0" prefWidth="631.0" style="-fx-background-color: white;">
          <children>
@@ -90,7 +90,7 @@
       <TextField fx:id="txtQtd" layoutX="86.0" layoutY="407.0" prefHeight="25.0" prefWidth="60.0" text="20" />
       <Label fx:id="lblQtd" layoutX="14.0" layoutY="411.0" text="Quantidade:" />
       <TextArea fx:id="txtLog" editable="false" layoutX="361.0" layoutY="316.0" prefHeight="198.0" prefWidth="270.0" wrapText="true" />
-      <TableView fx:id="tabProcessos" layoutX="633.0" prefHeight="514.0" prefWidth="643.0">
+      <TableView fx:id="tabProcessos" layoutX="633.0" prefHeight="514.0" prefWidth="733.0">
         <columns>
             
             <TableColumn fx:id="colId" text="ID" />
@@ -100,6 +100,7 @@
             <TableColumn fx:id="colCria" text="Criado" />
             <TableColumn fx:id="colAloc" text="Alocado" />
             <TableColumn fx:id="colConc" text="Concluido" />
+            <TableColumn fx:id="colEsp" text="Espera" />
             <TableColumn fx:id="colStat" text="Status" />
         </columns>
       </TableView>
